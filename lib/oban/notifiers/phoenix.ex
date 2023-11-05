@@ -1,5 +1,38 @@
 defmodule Oban.Notifiers.Phoenix do
   @moduledoc """
+  An `Oban.Notifier` that piggybacks on an application's `Phoenix.PubSub` for notifications.
+
+  ## Usage
+
+  Include `:oban_notifiers_phoenix` in your application's deps:
+
+  ```elixir
+  defp deps do
+    [
+      {:phoenix_pubsub, "~> 2.0"},
+      {:oban_notifiers_phoenix, "~> 0.1"},
+      ...
+    ]
+  end
+  ```
+
+  Make note of your application's `Phoenix.PubSub` instance name from the primary supervision tree:
+
+  ```elixir
+  def start(_type, _args) do
+    children = [
+      {Phoenix.PubSub, name: MyApp.PubSub},
+      ...
+  ```
+
+  Finally, configure Oban to use `Oban.Notifiers.Phoenix` as the notifier with the `PubSub`
+  intance name as the `:pubusb` option:
+
+  ```elixir
+  config :my_app, Oban,
+    notifier: {Oban.Notifiers.Phoenix, pubsub: MyApp.PubSub},
+    ...
+  ```
   """
 
   @behaviour Oban.Notifier
@@ -9,7 +42,8 @@ defmodule Oban.Notifiers.Phoenix do
   alias Oban.Notifier
   alias Phoenix.PubSub
 
-  defstruct [:conf, :pubsub, listeners: %{}]
+  @enforce_keys [:conf, :pubsub]
+  defstruct @enforce_keys
 
   @impl Notifier
   def start_link(opts) do
