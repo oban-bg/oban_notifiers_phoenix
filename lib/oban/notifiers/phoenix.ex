@@ -1,6 +1,13 @@
 defmodule Oban.Notifiers.Phoenix do
   @moduledoc """
-  An `Oban.Notifier` that piggybacks on an application's `Phoenix.PubSub` for notifications.
+  An `Oban.Notifier` that uses `Phoenix.PubSub` for notifications.
+
+  The `Phoenix` notifier allows Oban to share a Phoenix application's `PubSub` for notifications.
+  In addition to centralizing PubSub communications, it opens up the possible transports to all
+  PubSub adapters. Most importantly, it enables Redis notifications via the
+  [Phoenix.PubSub.Redis][pr] adapter
+
+  [pr]: https://hex.pm/packages/phoenix_pubsub_redis
 
   ## Usage
 
@@ -9,7 +16,6 @@ defmodule Oban.Notifiers.Phoenix do
   ```elixir
   defp deps do
     [
-      {:phoenix_pubsub, "~> 2.0"},
       {:oban_notifiers_phoenix, "~> 0.1"},
       ...
     ]

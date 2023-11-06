@@ -1,21 +1,47 @@
-# ObanNotifiersPhoenix
+# Oban.Notifiers.Phoenix
 
-**TODO: Add description**
+> An [Oban.Notifier][no] that uses [Phoenix.PubSub][pp] for notifications.
 
-## Installation
+[no]: https://hexdocs.pm/oban/Oban.Notifier.html
+[pp]: https://hexdocs.pm/phoenix_pubsub/Phoenix.PubSub.html
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `oban_notifiers_phoenix` to your list of dependencies in `mix.exs`:
+## Usage
+
+Include `:oban_notifiers_phoenix` in your Phoenix application's deps:
 
 ```elixir
-def deps do
+defp deps do
   [
-    {:oban_notifiers_phoenix, "~> 0.1.0"}
+    {:oban_notifiers_phoenix, "~> 0.1"},
+    ...
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/oban_notifiers_phoenix>.
+Make note of your application's `Phoenix.PubSub` instance name from the primary supervision tree:
 
+```elixir
+def start(_type, _args) do
+  children = [
+    {Phoenix.PubSub, name: MyApp.PubSub},
+    ...
+```
+
+Finally, configure Oban to use `Oban.Notifiers.Phoenix` as the notifier with the `PubSub`
+intance name as the `:pubusb` option:
+
+```elixir
+config :my_app, Oban,
+  notifier: {Oban.Notifiers.Phoenix, pubsub: MyApp.PubSub},
+...
+```
+
+## Contributing
+
+Run `mix test.ci` locally to ensure changes will pass in CI. That alias executes the following
+commands:
+
+* Check formatting (`mix format --check-formatted`)
+* Check unused deps (`mix deps.unlock --check-unused`)
+* Lint with Credo (`mix credo --strict`)
+* Run all tests (`mix test --raise`)
