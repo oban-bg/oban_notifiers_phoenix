@@ -1,45 +1,10 @@
 defmodule Oban.Notifiers.Phoenix do
-  @moduledoc """
-  An `Oban.Notifier` that uses `Phoenix.PubSub` for notifications.
+  @external_resource readme = Path.join([__DIR__, "../../../README.md"])
 
-  The `Phoenix` notifier allows Oban to share a Phoenix application's `PubSub` for notifications.
-  In addition to centralizing PubSub communications, it opens up the possible transports to all
-  PubSub adapters. Most importantly, it enables Redis notifications via the
-  [Phoenix.PubSub.Redis][pr] adapter
-
-  [pr]: https://hex.pm/packages/phoenix_pubsub_redis
-
-  ## Usage
-
-  Include `:oban_notifiers_phoenix` in your application's deps:
-
-  ```elixir
-  defp deps do
-    [
-      {:oban_notifiers_phoenix, "~> 0.1"},
-      ...
-    ]
-  end
-  ```
-
-  Make note of your application's `Phoenix.PubSub` instance name from the primary supervision tree:
-
-  ```elixir
-  def start(_type, _args) do
-    children = [
-      {Phoenix.PubSub, name: MyApp.PubSub},
-      ...
-  ```
-
-  Finally, configure Oban to use `Oban.Notifiers.Phoenix` as the notifier with the `PubSub`
-  intance name as the `:pubusb` option:
-
-  ```elixir
-  config :my_app, Oban,
-    notifier: {Oban.Notifiers.Phoenix, pubsub: MyApp.PubSub},
-    ...
-  ```
-  """
+  @moduledoc readme
+             |> File.read!()
+             |> String.split("<!-- MDOC -->")
+             |> Enum.fetch!(1)
 
   @behaviour Oban.Notifier
 
@@ -50,6 +15,9 @@ defmodule Oban.Notifiers.Phoenix do
 
   @enforce_keys [:conf, :pubsub]
   defstruct @enforce_keys
+
+  @doc false
+  def child_spec(opts), do: super(opts)
 
   @impl Notifier
   def start_link(opts) do

@@ -1,18 +1,30 @@
 # Oban.Notifiers.Phoenix
 
-> An [Oban.Notifier][no] that uses [Phoenix.PubSub][pp] for notifications.
+<!-- MDOC -->
+
+An [Oban.Notifier][no] that uses [Phoenix.PubSub][pp] for notifications.
+
+The `Phoenix` notifier allows Oban to share a Phoenix application's `PubSub` for notifications. In
+addition to centralizing PubSub communications, it opens up the possible transports to all PubSub
+adapters.
+
+Most importantly, as Oban already provides `Postgres` and `PG` notifiers, this package enables
+Redis notifications via the [Phoenix.PubSub.Redis][pr] adapter.
 
 [no]: https://hexdocs.pm/oban/Oban.Notifier.html
 [pp]: https://hexdocs.pm/phoenix_pubsub/Phoenix.PubSub.html
+[pr]: https://hex.pm/packages/phoenix_pubsub_redis
 
 ## Usage
 
-Include `:oban_notifiers_phoenix` in your Phoenix application's deps:
+This package currently requires features only available in Oban `main`. Until Oban v2.17 is
+published, you can use this package via GitHub:
 
 ```elixir
 defp deps do
   [
-    {:oban_notifiers_phoenix, "~> 0.1"},
+    {:oban, "~> 2.16", github: "sorentwo/oban"},
+    {:oban_notifiers_phoenix, "~> 0.1", github: "sorentwo/oban_notifiers_phoenix"},
     ...
   ]
 end
@@ -35,6 +47,8 @@ config :my_app, Oban,
   notifier: {Oban.Notifiers.Phoenix, pubsub: MyApp.PubSub},
 ...
 ```
+
+<!-- MDOC -->
 
 ## Contributing
 
