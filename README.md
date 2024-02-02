@@ -17,14 +17,12 @@ Redis notifications via the [Phoenix.PubSub.Redis][pr] adapter.
 
 ## Usage
 
-This package currently requires features only available in Oban `main`. Until Oban v2.17 is
-published, you can use this package via GitHub:
+This package requires a minimum of Oban v2.17 for a few enhancements:
 
 ```elixir
 defp deps do
   [
-    {:oban, "~> 2.16", github: "sorentwo/oban"},
-    {:oban_notifiers_phoenix, "~> 0.1", github: "sorentwo/oban_notifiers_phoenix"},
+    {:oban_notifiers_phoenix, "~> 0.1"},
     ...
   ]
 end

@@ -51,7 +51,7 @@ defmodule ObanNotifiersPhoenix.MixProject do
 
   defp deps do
     [
-      {:oban, "~> 2.16", github: "sorentwo/oban"},
+      {:oban, "~> 2.16"},
       {:phoenix_pubsub, "~> 2.0"},
       {:credo, "~> 1.7", only: [:test, :dev], runtime: false},
       {:ex_doc, "~> 0.30", only: [:test, :dev], runtime: false}
