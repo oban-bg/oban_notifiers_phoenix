@@ -12,36 +12,41 @@ jobs:
       matrix:
         include:
           - pair:
-              elixir: '1.12'
-              otp: '23.3'
-          - pair:
               elixir: '1.15'
-              otp: '26.0'
+              otp: '24.3'
+          - pair:
+              elixir: '1.18'
+              otp: '27.2'
             lint: lint
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.pair.otp}}
           elixir-version: ${{matrix.pair.elixir}}
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: |
             deps
             _build
           key: ${{ runner.os }}-mix-${{matrix.pair.elixir}}-${{matrix.pair.otp}}-${{ hashFiles('**/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-${{matrix.pair.elixir}}-${{matrix.pair.otp}}-
+          restore-keys: |
+            ${{ runner.os }}-mix-${{matrix.pair.elixir}}-${{matrix.pair.otp}}-
 
       - name: Run mix deps.get
         run: mix deps.get
 
       - name: Run mix format
         run: mix format --check-formatted
+        if: ${{ matrix.lint }}
+
+      - name: Run mix deps.unlock
+        run: mix deps.unlock --check-unused
         if: ${{ matrix.lint }}
 
       - name: Run mix deps.compile
@@ -57,4 +62,3 @@ jobs:
 
       - name: Run mix test
         run: mix test
-
