@@ -47,7 +47,7 @@ defmodule Oban.Notifiers.Phoenix do
   @impl Notifier
   def notify(server, channel, payload) do
     with {:ok, %{conf: conf, pubsub: pubsub}} <- GenServer.call(server, :get_state) do
-      PubSub.broadcast(pubsub, to_string(channel), {conf, channel, payload}, __MODULE__)
+      PubSub.broadcast(pubsub, to_string(channel), {conf.name, channel, payload}, __MODULE__)
 
       :ok
     end
@@ -64,8 +64,9 @@ defmodule Oban.Notifiers.Phoenix do
   end
 
   @doc false
-  def dispatch(entries, _from, {conf, channel, payload}) do
+  def dispatch(entries, _from, {name, channel, payload}) do
     pids = Enum.map(entries, &elem(&1, 0))
+    conf = Oban.config(name)
 
     for message <- payload, do: Notifier.relay(conf, pids, channel, message)
   end
