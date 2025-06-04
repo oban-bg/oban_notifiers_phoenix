@@ -10,7 +10,7 @@ defmodule Oban.Notifiers.Phoenix do
 
   use GenServer
 
-  alias Oban.Notifier
+  alias Oban.{Config, Notifier}
   alias Phoenix.PubSub
 
   defstruct [:conf, :pubsub]
@@ -22,13 +22,22 @@ defmodule Oban.Notifiers.Phoenix do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name, __MODULE__)
 
-    GenServer.start_link(__MODULE__, struct!(__MODULE__, opts), name: name)
+    # Only the `name` and `node` fields are necessary for scoping in the `relay` function.
+    # Constructing a new "hollow" config reduces the total data fetched from the registry on
+    # broadcast and dispatch.
+    state =
+      opts
+      |> Keyword.update!(:conf, fn conf -> %Config{name: conf.name, node: conf.node} end)
+      |> then(&struct!(__MODULE__, &1))
+
+    GenServer.start_link(__MODULE__, state, name: name)
   end
 
   @impl Notifier
   def listen(server, channels) do
     with {:ok, %{pubsub: pubsub}} <- get_state(server) do
-      for channel <- channels, do: PubSub.subscribe(pubsub, to_string(channel))
+      for channel <- channels,
+          do: PubSub.subscribe(pubsub, to_string(channel), metadata: __MODULE__)
 
       :ok
     end
@@ -46,7 +55,12 @@ defmodule Oban.Notifiers.Phoenix do
   @impl Notifier
   def notify(server, channel, payload) do
     with {:ok, %{conf: conf, pubsub: pubsub}} <- get_state(server) do
-      PubSub.broadcast(pubsub, to_string(channel), {conf.name, channel, payload}, __MODULE__)
+      PubSub.broadcast(
+        pubsub,
+        to_string(channel),
+        {conf.name, conf.node, channel, payload},
+        __MODULE__
+      )
 
       :ok
     end
@@ -60,9 +74,9 @@ defmodule Oban.Notifiers.Phoenix do
   end
 
   @doc false
-  def dispatch(entries, _from, {name, channel, payload}) do
+  def dispatch(entries, :none, {name, node, channel, payload}) do
     pids = Enum.map(entries, &elem(&1, 0))
-    conf = Oban.config(name)
+    conf = %Config{name: name, node: node}
 
     for message <- payload, do: Notifier.relay(conf, pids, channel, message)
   end
