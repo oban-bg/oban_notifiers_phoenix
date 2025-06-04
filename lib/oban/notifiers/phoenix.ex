@@ -13,8 +13,7 @@ defmodule Oban.Notifiers.Phoenix do
   alias Oban.Notifier
   alias Phoenix.PubSub
 
-  @enforce_keys [:conf, :pubsub]
-  defstruct @enforce_keys
+  defstruct [:conf, :pubsub]
 
   @doc false
   def child_spec(opts), do: super(opts)
@@ -23,12 +22,12 @@ defmodule Oban.Notifiers.Phoenix do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name, __MODULE__)
 
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, struct!(__MODULE__, opts), name: name)
   end
 
   @impl Notifier
   def listen(server, channels) do
-    with {:ok, %{pubsub: pubsub}} <- GenServer.call(server, :get_state) do
+    with {:ok, %{pubsub: pubsub}} <- get_state(server) do
       for channel <- channels, do: PubSub.subscribe(pubsub, to_string(channel))
 
       :ok
@@ -37,7 +36,7 @@ defmodule Oban.Notifiers.Phoenix do
 
   @impl Notifier
   def unlisten(server, channels) do
-    with {:ok, %{pubsub: pubsub}} <- GenServer.call(server, :get_state) do
+    with {:ok, %{pubsub: pubsub}} <- get_state(server) do
       for channel <- channels, do: PubSub.unsubscribe(pubsub, to_string(channel))
 
       :ok
@@ -46,7 +45,7 @@ defmodule Oban.Notifiers.Phoenix do
 
   @impl Notifier
   def notify(server, channel, payload) do
-    with {:ok, %{conf: conf, pubsub: pubsub}} <- GenServer.call(server, :get_state) do
+    with {:ok, %{conf: conf, pubsub: pubsub}} <- get_state(server) do
       PubSub.broadcast(pubsub, to_string(channel), {conf.name, channel, payload}, __MODULE__)
 
       :ok
@@ -54,13 +53,10 @@ defmodule Oban.Notifiers.Phoenix do
   end
 
   @impl GenServer
-  def init(opts) do
-    {:ok, struct!(__MODULE__, opts)}
-  end
+  def init(state) do
+    put_state(state)
 
-  @impl GenServer
-  def handle_call(:get_state, _from, state) do
-    {:reply, {:ok, state}, state}
+    {:ok, state}
   end
 
   @doc false
@@ -69,5 +65,18 @@ defmodule Oban.Notifiers.Phoenix do
     conf = Oban.config(name)
 
     for message <- payload, do: Notifier.relay(conf, pids, channel, message)
+  end
+
+  defp put_state(state) do
+    Registry.update_value(Oban.Registry, {state.conf.name, Oban.Notifier}, fn _ -> state end)
+  end
+
+  defp get_state(server) do
+    [name] = Registry.keys(Oban.Registry, server)
+
+    case Oban.Registry.lookup(name) do
+      {_pid, state} -> {:ok, state}
+      nil -> {:error, RuntimeError.exception("no notifier running as #{inspect(name)}")}
+    end
   end
 end
