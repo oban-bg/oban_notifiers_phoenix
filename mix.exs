@@ -45,6 +45,7 @@ defmodule ObanNotifiersPhoenix.MixProject do
       source_ref: "v#{@version}",
       source_url: @source_url,
       formatters: ["html"],
+      extras: ["CHANGELOG.md": [title: "Changelog"]],
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"]
     ]
   end
