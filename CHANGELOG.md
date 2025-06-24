@@ -1,5 +1,12 @@
 # Changelog for Oban Notifier Phoenix
 
+## v0.2.1 — 2025-06-24
+
+- Safely handle dispatches from older notifiers
+
+  In order to have graceful upgrades, this restores a clause to handle the older `conf` based
+  message format.
+
 ## v0.2.0 — 2025-06-04
 
 ### Enhancements
