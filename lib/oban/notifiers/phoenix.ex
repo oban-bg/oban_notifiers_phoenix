@@ -81,6 +81,10 @@ defmodule Oban.Notifiers.Phoenix do
     for message <- payload, do: Notifier.relay(conf, pids, channel, message)
   end
 
+  def dispatch(entries, _from, {conf, channel, payload}) do
+    dispatch(entries, :none, {conf.name, conf.node, channel, payload})
+  end
+
   defp put_state(state) do
     Registry.update_value(Oban.Registry, {state.conf.name, Oban.Notifier}, fn _ -> state end)
   end

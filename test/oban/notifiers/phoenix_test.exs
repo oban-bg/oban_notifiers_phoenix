@@ -54,4 +54,12 @@ defmodule Oban.Notifiers.PhoenixTest do
     assert_receive {:notification, :signal, _}
     refute_received {:notification, :gossip, _}
   end
+
+  test "safely handling dispatches from older notifier versions" do
+    :ok = Notifier.listen(:signal)
+
+    conf = Oban.config()
+
+    assert [] = Oban.Notifiers.Phoenix.dispatch(%{}, self(), {conf, :signal, %{}})
+  end
 end
