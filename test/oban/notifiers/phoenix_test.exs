@@ -64,7 +64,7 @@ defmodule Oban.Notifiers.PhoenixTest do
       Phoenix.PubSub.broadcast(
         config.test,
         "signal",
-        {Oban, :signal, [JSON.encode!(payload)]},
+        {Oban, :signal, [payload]},
         Oban.Notifiers.Phoenix
       )
     end
@@ -72,8 +72,8 @@ defmodule Oban.Notifiers.PhoenixTest do
     real_ident = Config.to_ident(Oban.config())
     fake_ident = "Oban.other-node@localhost"
 
-    broadcast.(%{action: "real", ident: real_ident})
-    broadcast.(%{action: "fake", ident: fake_ident})
+    broadcast.(~s({"action":"real", "ident": "#{real_ident}"}))
+    broadcast.(~s({"action":"fake", "ident": "#{fake_ident}"}))
 
     assert_receive {:notification, :signal, %{"action" => "real"}}
     refute_receive {:notification, :signal, %{"action" => "fake"}}, 50
