@@ -10,7 +10,7 @@ defmodule Oban.Notifiers.Phoenix do
 
   use GenServer
 
-  alias Oban.{Config, Notifier}
+  alias Oban.Notifier
   alias Phoenix.PubSub
 
   defstruct [:conf, :pubsub]
@@ -22,15 +22,7 @@ defmodule Oban.Notifiers.Phoenix do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name, __MODULE__)
 
-    # Only the `name` and `node` fields are necessary for scoping in the `relay` function.
-    # Constructing a new "hollow" config reduces the total data fetched from the registry on
-    # broadcast and dispatch.
-    state =
-      opts
-      |> Keyword.update!(:conf, fn conf -> %Config{name: conf.name, node: conf.node} end)
-      |> then(&struct!(__MODULE__, &1))
-
-    GenServer.start_link(__MODULE__, state, name: name)
+    GenServer.start_link(__MODULE__, struct!(__MODULE__, opts), name: name)
   end
 
   @impl Notifier
@@ -58,7 +50,7 @@ defmodule Oban.Notifiers.Phoenix do
       PubSub.broadcast(
         pubsub,
         to_string(channel),
-        {conf.name, conf.node, channel, payload},
+        {conf.name, channel, payload},
         __MODULE__
       )
 
@@ -74,13 +66,19 @@ defmodule Oban.Notifiers.Phoenix do
   end
 
   @doc false
-  def dispatch(entries, :none, {name, node, channel, payload}) do
+  def dispatch(entries, :none, {name, channel, payload}) do
     pids = Enum.map(entries, &elem(&1, 0))
-    conf = %Config{name: name, node: node}
+    conf = Oban.config(name)
 
     for message <- payload, do: Notifier.relay(conf, pids, channel, message)
   end
 
+  # Backward compatibility with 0.2.1
+  def dispatch(entries, :none, {name, _node, channel, payload}) do
+    dispatch(entries, :none, {name, channel, payload})
+  end
+
+  # Backward compatibility with < 0.2.0
   def dispatch(entries, _from, {conf, channel, payload}) do
     dispatch(entries, :none, {conf.name, conf.node, channel, payload})
   end

@@ -1,7 +1,7 @@
 defmodule Oban.Notifiers.PhoenixTest do
   use ExUnit.Case, async: true
 
-  alias Oban.Notifier
+  alias Oban.{Config, Notifier}
 
   defmodule Repo do
     use Ecto.Repo, otp_app: :oban, adapter: Ecto.Adapters.Postgres
@@ -53,6 +53,30 @@ defmodule Oban.Notifiers.PhoenixTest do
 
     assert_receive {:notification, :signal, _}
     refute_received {:notification, :gossip, _}
+  end
+
+  test "broadcasting scoped notifications", config do
+    :ok = Notifier.listen(:signal)
+
+    # We can't start two instances with the same name on a single node, so fake it by sending a
+    # direct broadcast.
+    broadcast = fn payload ->
+      Phoenix.PubSub.broadcast(
+        config.test,
+        "signal",
+        {Oban, :signal, [JSON.encode!(payload)]},
+        Oban.Notifiers.Phoenix
+      )
+    end
+
+    real_ident = Config.to_ident(Oban.config())
+    fake_ident = "Oban.other-node@localhost"
+
+    broadcast.(%{action: "real", ident: real_ident})
+    broadcast.(%{action: "fake", ident: fake_ident})
+
+    assert_receive {:notification, :signal, %{"action" => "real"}}
+    refute_receive {:notification, :signal, %{"action" => "fake"}}, 50
   end
 
   test "safely handling dispatches from older notifier versions" do
