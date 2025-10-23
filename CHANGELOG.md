@@ -1,5 +1,17 @@
 # Changelog for Oban Notifier Phoenix
 
+## v0.2.2 — 2025-10-23
+
+- Correct node scoping during dispatch
+
+  The name/node from the config that originally published the message was re-used during local
+  dispatch, which prevented the notifier's relay from properly scoping messages. In other words,
+  it looked like every message originated locally because the `ident` always matched the current
+  node.
+
+  This eliminates the problem by grabbing the config for the local instance by name, rather than
+  sharing the node/name and building a static config from it.
+
 ## v0.2.1 — 2025-06-24
 
 - Safely handle dispatches from older notifiers
