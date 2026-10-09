@@ -67,10 +67,15 @@ defmodule Oban.Notifiers.Phoenix do
 
   @doc false
   def dispatch(entries, :none, {name, channel, payload}) do
-    pids = Enum.map(entries, &elem(&1, 0))
-    conf = Oban.config(name)
+    case Oban.Registry.lookup(name) do
+      {_pid, conf} ->
+        pids = Enum.map(entries, &elem(&1, 0))
 
-    for message <- payload, do: Notifier.relay(conf, pids, channel, message)
+        for message <- payload, do: Notifier.relay(conf, pids, channel, message)
+
+      nil ->
+        []
+    end
   end
 
   # Backward compatibility with 0.2.1

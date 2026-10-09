@@ -79,6 +79,19 @@ defmodule Oban.Notifiers.PhoenixTest do
     refute_receive {:notification, :signal, %{"action" => "fake"}}, 50
   end
 
+  test "ignoring dispatches for an instance that isn't running" do
+    :ok = Notifier.listen(:signal)
+
+    assert [] =
+             Oban.Notifiers.Phoenix.dispatch(
+               [{self(), Oban.Notifiers.Phoenix}],
+               :none,
+               {MissingOban, :signal, [~s({"action":"ignored"})]}
+             )
+
+    refute_received {:notification, :signal, _}
+  end
+
   test "safely handling dispatches from older notifier versions" do
     :ok = Notifier.listen(:signal)
 
