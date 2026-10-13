@@ -10,7 +10,7 @@ defmodule Oban.Notifiers.Phoenix do
 
   use GenServer
 
-  alias Oban.Notifier
+  alias Oban.{Config, Notifier}
   alias Phoenix.PubSub
 
   defstruct [:conf, :pubsub]
@@ -27,9 +27,10 @@ defmodule Oban.Notifiers.Phoenix do
 
   @impl Notifier
   def listen(server, channels) do
-    with {:ok, %{pubsub: pubsub}} <- get_state(server) do
-      for channel <- channels,
-          do: PubSub.subscribe(pubsub, to_string(channel), metadata: __MODULE__)
+    with {:ok, %{conf: conf, pubsub: pubsub}} <- get_state(server) do
+      meta = {conf.name, conf.node}
+
+      for channel <- channels, do: PubSub.subscribe(pubsub, to_string(channel), metadata: meta)
 
       :ok
     end
@@ -66,11 +67,18 @@ defmodule Oban.Notifiers.Phoenix do
   end
 
   @doc false
-  def dispatch(entries, :none, {name, channel, payload}) do
-    pids = Enum.map(entries, &elem(&1, 0))
-    conf = Oban.config(name)
+  # Backward compatibility with < 0.2.0, which broadcast the full config. This must come first
+  # because the shape is otherwise indistinguishable from the current message.
+  def dispatch(entries, _from, {%Config{name: name}, channel, payload}) do
+    dispatch(entries, :none, {name, channel, payload})
+  end
 
-    for message <- payload, do: Notifier.relay(conf, pids, channel, message)
+  def dispatch(entries, :none, {name, channel, payload}) do
+    for {meta, pids} <- Enum.group_by(entries, &elem(&1, 1), &elem(&1, 0)),
+        conf = to_conf(meta, name),
+        not is_nil(conf),
+        message <- payload,
+        do: Notifier.relay(conf, pids, channel, message)
   end
 
   # Backward compatibility with 0.2.1
@@ -78,9 +86,13 @@ defmodule Oban.Notifiers.Phoenix do
     dispatch(entries, :none, {name, channel, payload})
   end
 
-  # Backward compatibility with < 0.2.0
-  def dispatch(entries, _from, {conf, channel, payload}) do
-    dispatch(entries, :none, {conf.name, conf.node, channel, payload})
+  defp to_conf({name, node}, _name), do: %Config{name: name, node: node}
+
+  defp to_conf(__MODULE__, name) do
+    case Oban.Registry.lookup(name) do
+      {_pid, conf} -> conf
+      nil -> nil
+    end
   end
 
   defp put_state(state) do

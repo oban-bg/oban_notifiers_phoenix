@@ -79,6 +79,64 @@ defmodule Oban.Notifiers.PhoenixTest do
     refute_receive {:notification, :signal, %{"action" => "fake"}}, 50
   end
 
+  test "dispatching without a registered instance", config do
+    :ok = Notifier.listen(:signal)
+
+    stop_supervised!(Oban)
+
+    refute Oban.Registry.lookup(Oban)
+
+    Phoenix.PubSub.broadcast(
+      config.test,
+      "signal",
+      {Oban, :signal, [~s({"action":"orphaned"})]},
+      Oban.Notifiers.Phoenix
+    )
+
+    assert_receive {:notification, :signal, %{"action" => "orphaned"}}
+  end
+
+  test "relaying broadcasts from older notifier versions", config do
+    # 0.2.1 included the node, and < 0.2.0 sent the full config
+    :ok = Notifier.listen(:signal)
+
+    conf = Oban.config()
+
+    for message <- [
+          {Oban, conf.node, :signal, [~s({"action":"v021"})]},
+          {conf, :signal, [~s({"action":"v010"})]}
+        ] do
+      Phoenix.PubSub.broadcast(config.test, "signal", message, Oban.Notifiers.Phoenix)
+    end
+
+    assert_receive {:notification, :signal, %{"action" => "v021"}}
+    assert_receive {:notification, :signal, %{"action" => "v010"}}
+  end
+
+  test "relaying to subscriptions from older notifier versions", config do
+    # Subscriptions from <= 0.2.2 only stored the module as metadata
+    Phoenix.PubSub.subscribe(config.test, "signal", metadata: Oban.Notifiers.Phoenix)
+
+    broadcast = fn action ->
+      Phoenix.PubSub.broadcast(
+        config.test,
+        "signal",
+        {Oban, :signal, [~s({"action":"#{action}"})]},
+        Oban.Notifiers.Phoenix
+      )
+    end
+
+    broadcast.("running")
+
+    assert_receive {:notification, :signal, %{"action" => "running"}}
+
+    stop_supervised!(Oban)
+
+    broadcast.("stopped")
+
+    refute_receive {:notification, :signal, _}, 50
+  end
+
   test "safely handling dispatches from older notifier versions" do
     :ok = Notifier.listen(:signal)
 
