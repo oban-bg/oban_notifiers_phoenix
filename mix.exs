@@ -1,7 +1,7 @@
 defmodule ObanNotifiersPhoenix.MixProject do
   use Mix.Project
 
-  @source_url "https://github.com/sorentwo/oban_notifiers_phoenix"
+  @source_url "https://github.com/oban-bg/oban_notifiers_phoenix"
   @version "0.2.2"
 
   def project do
